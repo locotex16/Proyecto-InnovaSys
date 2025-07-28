@@ -1,0 +1,55 @@
+---
+- name: Instalar Samba
+  apt:
+    name: samba
+    state: present
+    update_cache: yes
+
+- name: Crear grupo desarrolladores
+  group:
+    name: desarrolladores
+    state: present
+
+- name: Crear usuario devuser1 sin shell
+  user:
+    name: devuser1
+    shell: /usr/sbin/nologin
+    groups: desarrolladores
+    append: yes
+    state: present
+
+- name: Establecer contraseña de Samba
+  shell: (echo Innova.2025; echo Innova.2025) | smbpasswd -s -a devuser1
+  args:
+    creates: /var/lib/samba/private/devuser1-pass-set
+
+- name: Crear marcador de contraseña
+  file:
+    path: /var/lib/samba/private/devuser1-pass-set
+    state: touch
+
+- name: Crear directorio compartido
+  file:
+    path: /srv/samba/proyectos
+    state: directory
+    mode: '0770'
+    group: desarrolladores
+
+- name: Configurar recurso compartido en smb.conf
+  blockinfile:
+    path: /etc/samba/smb.conf
+    block: |
+      [Proyectos]
+      path = /srv/samba/proyectos
+      writable = yes
+      browsable = yes
+      valid users = @desarrolladores
+      create mask = 0660
+      directory mask = 0770
+  notify: Reiniciar samba
+
+- name: Asegurar que smbd esté activo y habilitado
+  service:
+    name: smbd
+    state: started
+    enabled: yes

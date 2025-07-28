@@ -1,0 +1,5 @@
+---
+- name: Reiniciar samba
+  service:
+    name: smbd
+    state: restarted
